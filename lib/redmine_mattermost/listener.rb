@@ -9,8 +9,11 @@ class MattermostListener < Redmine::Hook::Listener
 
 		return unless channels.any? and url
 		return if issue.is_private?
-
-		msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description}"
+		
+		#orig
+		#msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description}"
+		
+		msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description} for @#{escape issue.assigned_to.to_s.sub!(" ",".").downcase}"
 
 		attachment = {}
 		attachment[:text] = escape issue.description if issue.description
@@ -48,8 +51,11 @@ class MattermostListener < Redmine::Hook::Listener
 		return if issue.is_private?
 		return if journal.private_notes?
 
-		msg = "[#{escape issue.project}] #{escape journal.user.to_s} updated <#{object_url issue}|#{escape issue}>#{mentions journal.notes}"
+		#orig
+		#msg = "[#{escape issue.project}] #{escape journal.user.to_s} updated <#{object_url issue}|#{escape issue}>#{mentions journal.notes}"
 
+		msg = "[#{escape issue.project}] #{escape journal.user.to_s} updated <#{object_url issue}|#{escape issue}>#{mentions journal.notes} (assigned to @#{escape issue.assigned_to.to_s.sub!(" ",".").downcase})"
+		
 		attachment = {}
 		attachment[:text] = escape journal.notes if journal.notes
 		attachment[:fields] = journal.details.map { |d| detail_to_field d }
@@ -202,15 +208,20 @@ private
 			Setting.plugin_redmine_mattermost[:channel],
 		].find{|v| v.present?}
 
-		# Channel name '-' is reserved for NOT notifying
+		# Channel name '-' or empty '' is reserved for NOT notifying
+		return [] if val.to_s == ''
 		return [] if val.to_s == '-'
-		val.split(",")
+		return val.split(",") if val.is_a? String
+		val
 	end
 
 	def detail_to_field(detail)
+		field_format = nil
+
 		if detail.property == "cf"
 			key = CustomField.find(detail.prop_key).name rescue nil
 			title = key
+			field_format = CustomField.find(detail.prop_key).field_format rescue nil
 		elsif detail.property == "attachment"
 			key = "attachment"
 			title = I18n.t :label_attachment
@@ -252,6 +263,12 @@ private
 		when "parent"
 			issue = Issue.find(detail.value) rescue nil
 			value = "<#{object_url issue}|#{escape issue}>" if issue
+		end
+
+		case field_format
+		when "version"
+			version = Version.find(detail.value) rescue nil
+			value = escape version.to_s
 		end
 
 		value = "-" if value.empty?
