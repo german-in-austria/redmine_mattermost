@@ -10,10 +10,42 @@ class MattermostListener < Redmine::Hook::Listener
 		return unless channels.any? and url
 		return if issue.is_private?
 		
-		#orig
-		#msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description}"
-		
-		msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description} for @#{escape issue.assigned_to.to_s.sub!(" ",".").downcase}"
+		#check if issue is assigend to a specific person or group
+		if issue.assigned_to
+			#check if issue is assigned to a person (group names don't contain spaces)
+			if issue.assigned_to.to_s =~ /\s/
+				if issue.assigned_to.to_s.count(' ') > 1
+					puts case issue.assigned_to.to_s
+						when "Ludwig Maximilian Breuer"
+							msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description} for @lmb"
+						when "Hans Christian Breuer"
+							msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description} for @hcb"
+						when "Ann Kathrin Fischer"
+							msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description} for @ann.fischer"
+						else
+							msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description} for @usermitdoppelvorname"
+					end
+					#msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description} for @usermitdoppelvorname"
+				else
+					puts case issue.assigned_to.to_s
+						when "Arnold Graf"
+							msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description} for @arni"
+						when "Thomas Aiglstorfer"
+							msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description} for @thomas_ai"
+						else
+							msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description} for @#{escape issue.assigned_to.to_s.gsub!(" ",".").downcase}"
+					end
+					
+					#msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description} for @#{escape issue.assigned_to.to_s.gsub!(" ",".").downcase}"
+				end
+			else
+				#orig msg if group
+				msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description}"
+			end
+		else
+			#orig message -> display this msg only if the ticket is not assigned to anyone specific (e.g. assigned to no user or assigned to a group)
+			msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description}"
+		end
 
 		attachment = {}
 		attachment[:text] = escape issue.description if issue.description
@@ -51,10 +83,44 @@ class MattermostListener < Redmine::Hook::Listener
 		return if issue.is_private?
 		return if journal.private_notes?
 
-		#orig
-		#msg = "[#{escape issue.project}] #{escape journal.user.to_s} updated <#{object_url issue}|#{escape issue}>#{mentions journal.notes}"
-
-		msg = "[#{escape issue.project}] #{escape journal.user.to_s} updated <#{object_url issue}|#{escape issue}>#{mentions journal.notes} (assigned to @#{escape issue.assigned_to.to_s.sub!(" ",".").downcase})"
+		#check if issue is assigned to a specific person or group
+		if issue.assigned_to
+			#check if issue is assigned to a person (group names don't contain spaces)
+			if issue.assigned_to.to_s =~ /\s/
+			
+				if issue.assigned_to.to_s.count(' ') > 1
+					#msg = "[#{escape issue.project}] #{escape issue.author} created <#{object_url issue}|#{escape issue}>#{mentions issue.description} for @usermitdoppelvorname"
+					#special treatment for our special employees with two or more first names
+					puts case issue.assigned_to.to_s
+						when "Ludwig Maximilian Breuer"
+						  msg = "[#{escape issue.project}] #{escape journal.user.to_s} updated <#{object_url issue}|#{escape issue}>#{mentions journal.notes} (assigned to @lmb)"
+						when "Hans Christian Breuer"
+						  msg = "[#{escape issue.project}] #{escape journal.user.to_s} updated <#{object_url issue}|#{escape issue}>#{mentions journal.notes} (assigned to @hcb)"
+						when "Ann Kathrin Fischer"
+						  msg = "[#{escape issue.project}] #{escape journal.user.to_s} updated <#{object_url issue}|#{escape issue}>#{mentions journal.notes} (assigned to @ann.fischer)"
+						else
+							msg = "[#{escape issue.project}] #{escape journal.user.to_s} updated <#{object_url issue}|#{escape issue}>#{mentions journal.notes} (assigned to @usermitdoppelvorname)"
+					end
+				else
+					#special treatment for our special employees arni and thomas (the cool techies think they don't ned to obey the name standard)
+					puts case issue.assigned_to.to_s
+						when "Arnold Graf"
+						  msg = "[#{escape issue.project}] #{escape journal.user.to_s} updated <#{object_url issue}|#{escape issue}>#{mentions journal.notes} (assigned to @arni)"
+						when "Thomas Aiglstorfer"
+						  msg = "[#{escape issue.project}] #{escape journal.user.to_s} updated <#{object_url issue}|#{escape issue}>#{mentions journal.notes} (assigned to @thomas_ai)"
+						else
+						  msg = "[#{escape issue.project}] #{escape journal.user.to_s} updated <#{object_url issue}|#{escape issue}>#{mentions journal.notes} (assigned to @#{escape issue.assigned_to.to_s.gsub!(" ",".").downcase})"
+					end
+					#msg = "[#{escape issue.project}] #{escape journal.user.to_s} updated <#{object_url issue}|#{escape issue}>#{mentions journal.notes} (assigned to @#{escape issue.assigned_to.to_s.gsub!(" ",".").downcase})"
+				end
+			else
+				#orig msg if group
+				msg = "[#{escape issue.project}] #{escape journal.user.to_s} updated <#{object_url issue}|#{escape issue}>#{mentions journal.notes}"	
+			end			
+		else
+			#orig message -> display this msg only if the ticket is not assigned to anyone specific (e.g. assigned to no user or assigned to a group)
+			msg = "[#{escape issue.project}] #{escape journal.user.to_s} updated <#{object_url issue}|#{escape issue}>#{mentions journal.notes}"
+		end
 		
 		attachment = {}
 		attachment[:text] = escape journal.notes if journal.notes
@@ -226,7 +292,7 @@ private
 			key = "attachment"
 			title = I18n.t :label_attachment
 		else
-			key = detail.prop_key.to_s.sub("_id", "")
+			key = detail.prop_key.to_s.gsub("_id", "")
 			title = I18n.t "field_#{key}"
 		end
 
